@@ -61,7 +61,7 @@ clock = pg.time.Clock()
 class GameObject:
     """Базовый класс, содержит общие атрибуты игровых объектов."""
 
-    def __init__(self, color=SNAKE_COLOR):
+    def __init__(self, color=BOARD_BACKGROUND_COLOR):
         self.position = (
             (SCREEN_WIDTH // 2 - GRID_SIZE), (SCREEN_HEIGHT // 2 - GRID_SIZE)
         )
@@ -86,7 +86,9 @@ class Apple(GameObject):
 
     def __init__(self, color=APPLE_COLOR, occupied_positions=None):
         super().__init__(color)
-        self.randomize_position([occupied_positions])
+        # Если occupied_positions равно None или пусто ([], '', 0, и т.п.)
+        #  — используется []:
+        self.randomize_position(occupied_positions or [])
 
     def randomize_position(self, occupied_positions):
         """Выбирает случайную свободную позицию на игровом поле."""
