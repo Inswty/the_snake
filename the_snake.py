@@ -14,6 +14,25 @@ DOWN = (0, 1)
 LEFT = (-1, 0)
 RIGHT = (1, 0)
 
+# Карта направлений:
+TURN_MAP = {
+    # Если змейка движется ВВЕРХ, можно пойти ВЛЕВО или ВПРАВО
+    (UP, pg.K_LEFT): LEFT,
+    (UP, pg.K_RIGHT): RIGHT,
+
+    # Если змейка движется ВНИЗ, можно пойти ВЛЕВО или ВПРАВО
+    (DOWN, pg.K_LEFT): LEFT,
+    (DOWN, pg.K_RIGHT): RIGHT,
+
+    # Если змейка движется ВЛЕВО, можно пойти ВВЕРХ или ВНИЗ
+    (LEFT, pg.K_UP): UP,
+    (LEFT, pg.K_DOWN): DOWN,
+
+    # Если змейка движется ВПРАВО, можно пойти ВВЕРХ или ВНИЗ
+    (RIGHT, pg.K_UP): UP,
+    (RIGHT, pg.K_DOWN): DOWN,
+}
+
 # Цвет фона - черный:
 BOARD_BACKGROUND_COLOR = (0, 0, 0)
 
@@ -23,8 +42,11 @@ BORDER_COLOR = (93, 216, 228)
 # Цвет яблока
 APPLE_COLOR = (255, 0, 0)
 
-# Цвет змейки
+# Цвет тела змейки
 SNAKE_COLOR = (0, 255, 0)
+
+# Цвет головы
+SNAKE_HEAD_COLOR = (0, 200, 0)
 
 # Настройка игрового окна:
 screen = pg.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT), 0, 32)
@@ -39,7 +61,7 @@ clock = pg.time.Clock()
 class GameObject:
     """Базовый класс, содержит общие атрибуты игровых объектов."""
 
-    def __init__(self, color=(255, 0, 0)):
+    def __init__(self, color=SNAKE_COLOR):
         self.position = (
             (SCREEN_WIDTH // 2 - GRID_SIZE), (SCREEN_HEIGHT // 2 - GRID_SIZE)
         )
@@ -47,7 +69,9 @@ class GameObject:
 
     def draw(self):
         """Метод должен быть реализован в подклассе."""
-        NotImplementedError
+        raise NotImplementedError(
+            f'Метод draw() не реализован в классе {self.__class__.__name__}.'
+        )
 
     def draw_rect(self, position, body_color, border_color=None):
         """Отрисовает элемент змейки."""
@@ -62,20 +86,16 @@ class Apple(GameObject):
 
     def __init__(self, color=APPLE_COLOR, occupied_positions=None):
         super().__init__(color)
-        self.randomize_position(occupied_positions)
+        self.randomize_position([occupied_positions])
 
     def randomize_position(self, occupied_positions):
         """Выбирает случайную свободную позицию на игровом поле."""
-        if occupied_positions is None:
-            occupied_positions = []  # Заменяем None на пустой список
-
         while True:
-            new_position = (
+            self.position = (
                 randrange(0, SCREEN_WIDTH, GRID_SIZE),
                 randrange(0, SCREEN_HEIGHT, GRID_SIZE),
             )
-            if new_position not in occupied_positions:
-                self.position = new_position
+            if self.position not in occupied_positions:
                 break
 
     def draw(self):
@@ -88,11 +108,12 @@ class Snake(GameObject):
     Управляет движением, отрисовкой. Обрабатывает действия пользователя.
     """
 
-    def __init__(self, color=SNAKE_COLOR):
+    def __init__(self, color=SNAKE_COLOR, head_color=SNAKE_HEAD_COLOR):
         super().__init__(color)
-        self.last = None
+        self.head_color = head_color
         self.speed = 10  # Начальная скорость змейки.
         self.reset()
+        self.direction = RIGHT
 
     def update_direction(self, new_direction):
         """Метод обновления направления после нажатия на кнопку."""
@@ -122,7 +143,7 @@ class Snake(GameObject):
     def draw(self):
         """Отрисовывает змейку на экране, затирая след."""
         # Отрисовка головы.
-        self.draw_rect(self.get_head_position(), self.body_color, BORDER_COLOR)
+        self.draw_rect(self.get_head_position(), self.head_color, BORDER_COLOR)
 
         # Отрисовка глаз
         eye_radius = 3
@@ -143,12 +164,12 @@ class Snake(GameObject):
             DOWN: [(offset, GRID_SIZE - offset),
                    (GRID_SIZE - offset, GRID_SIZE - offset)],
         }
-        # Отрисовываем на голове в соответсвии с направлением.
+        # Глаза на голове в соответсвии с направлением.
         for dx, dy in eye_offsets.get(self.direction, []):
             pg.draw.circle(screen, BOARD_BACKGROUND_COLOR,
                            (pos_x + dx, pos_y + dy), eye_radius)
 
-        # Затирание глаз на уже не голове.
+        # Голова становится телом.
         if len(self.positions) > 1:
             self.draw_rect(self.positions[1], self.body_color)
 
@@ -170,24 +191,6 @@ class Snake(GameObject):
 
 def handle_keys(game_object):
     """Функция обработки действий пользователя."""
-    # Управление направлением.
-    direction_map = {
-        # Если змейка движется ВВЕРХ, можно пойти ВЛЕВО или ВПРАВО
-        (UP, pg.K_LEFT): LEFT,
-        (UP, pg.K_RIGHT): RIGHT,
-
-        # Если змейка движется ВНИЗ, можно пойти ВЛЕВО или ВПРАВО
-        (DOWN, pg.K_LEFT): LEFT,
-        (DOWN, pg.K_RIGHT): RIGHT,
-
-        # Если змейка движется ВЛЕВО, можно пойти ВВЕРХ или ВНИЗ
-        (LEFT, pg.K_UP): UP,
-        (LEFT, pg.K_DOWN): DOWN,
-
-        # Если змейка движется ВПРАВО, можно пойти ВВЕРХ или ВНИЗ
-        (RIGHT, pg.K_UP): UP,
-        (RIGHT, pg.K_DOWN): DOWN,
-    }
     for event in pg.event.get():
         # Выход по Esc или закрытие окна.
         if (event.type == pg.QUIT
@@ -198,7 +201,7 @@ def handle_keys(game_object):
         if event.type == pg.KEYDOWN:
             # Возвращаем новое направление, если значение есть в словаре.
             # Если в словаре значения нет, возвращается None.
-            new_direction = direction_map.get(
+            new_direction = TURN_MAP.get(
                 (game_object.direction, event.key))
 
             # Регулировка скорости.
@@ -214,7 +217,7 @@ def main():
     # Инициализация pygame:
     pg.init()
     # Создаём экземпляры классов.
-    snake = Snake(SNAKE_COLOR)
+    snake = Snake(SNAKE_COLOR, SNAKE_HEAD_COLOR)
     apple = Apple(APPLE_COLOR, snake.positions)
 
     while True:
@@ -238,7 +241,7 @@ def main():
             # Перемещаем яблоко в свободное место.
             apple.randomize_position(snake.positions)
         # Проверка столкновения с хвостом.
-        elif snake.get_head_position() in snake.positions[1:]:
+        elif snake.get_head_position() in snake.positions[4:]:
             # Наезд на хвост. Перезапуск.
             snake.reset()  # Сброс змейки.
             screen.fill(BOARD_BACKGROUND_COLOR)  # Очищаем весь экран.
