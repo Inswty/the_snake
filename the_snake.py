@@ -48,6 +48,9 @@ SNAKE_COLOR = (0, 255, 0)
 # Цвет головы
 SNAKE_HEAD_COLOR = (0, 200, 0)
 
+# Цвет шрифта
+FONT_COLOR = (255, 255, 255)
+
 # Настройка игрового окна:
 screen = pg.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT), 0, 32)
 
@@ -210,7 +213,7 @@ def handle_keys(game_object):
             if event.key in (pg.K_PLUS, pg.K_EQUALS):
                 game_object.speed = min(game_object.speed + 2, 30)  # Макс 30.
             elif event.key == pg.K_MINUS:
-                game_object.speed = max(game_object.speed - 2, 6)  # Мин 6.
+                game_object.speed = max(game_object.speed - 2, 4)  # Мин 4.
             return new_direction
 
 
@@ -221,13 +224,14 @@ def main():
     # Создаём экземпляры классов.
     snake = Snake(SNAKE_COLOR, SNAKE_HEAD_COLOR)
     apple = Apple(APPLE_COLOR, snake.positions)
+    # Создание шрифта
 
     while True:
         clock.tick(snake.speed)
         # Обновляем заголовок окна с текущей скоростью.
         pg.display.set_caption(
             f'Змейка | Текущая скорость: {snake.speed} | '
-            f'Изменить скорость: (+, -) | Выйти: (Esc)'
+            f'Изменить скорость: (+, -) | Выйти: (Esc) | Total = {snake.length}'
         )
         # Обработка событий клавиш.
         new_direction = handle_keys(snake)
