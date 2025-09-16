@@ -11,11 +11,11 @@
 ## Запуск игры
 Создайте виртуальное окружение (рекомендуется) и установите зависимости:
 ```bash
-python -m venv .venv
-# Windows
-.venv\Scripts\activate
+python -m venv venv
+# Windows (Git Bash):
+source venv/Scripts/activate
 # macOS / Linux
-source .venv/bin/activate
+source venv/bin/activate
 
 pip install -r requirements.txt
 ```
